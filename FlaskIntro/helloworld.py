@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 app = Flask(__name__)
 
 
@@ -21,5 +21,36 @@ def yuh():
     return jsonify(ret_json)
 
 
-if __name__=="__main__":
+@app.route('/example')
+def info():
+    my_json = {
+        'Name': 'Grant Mak',
+        'Age': '21',
+        'Emails': [
+            {
+                'type': 'work',
+                'address': 'grant.mak@garmin.com',
+            },
+            {
+                'type': 'personal',
+                'address': 'gmak6464@gmail.com',
+            }
+        ]
+    }
+    return jsonify(my_json)
+
+
+@app.route('/adder', methods=["POST"])
+def add_two_nums():
+    data = request.get_json()
+    x = data['x']
+    y = data['y']
+    z = x+y
+    my_sum = {
+        'z': z
+    }
+    return jsonify(my_sum), 200
+
+
+if __name__ == "__main__":
     app.run(debug=True)
