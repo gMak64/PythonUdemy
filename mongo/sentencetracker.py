@@ -7,8 +7,8 @@ import re
 app = Flask(__name__)
 api = Api(app)
 
-client = MongoClient("mongodb://db:27017")
-db = client.SentencesDatabase
+client = MongoClient("mongodb://localhost:27017")
+db = client["SentencesDatabase"]
 users = db["Users"]
 
 parser = reqparse.RequestParser()
@@ -26,10 +26,11 @@ Be between 7 and 15 characters'''
 
 
 def username_check(username):
-    woah = users.find({
-        "Username": username
-    })
-    print(woah)
+    try:
+        users.find({"Username": username})[0]
+        abort(400, message="This username is already taken")
+    except IndexError:
+        pass
 
 
 def password_check(password):
@@ -59,14 +60,15 @@ class Register(Resource):
         args = parser.parse_args()
         username = args["Username"]
         password = args["Password"]
+        username_check(username)
         password_check(password)
 
         hashed_password = bcrypt.hashpw(password.encode('utf8'), bcrypt.gensalt())
         users.insert_one({
              "Username": username,
              "Password": hashed_password,
-             # "Sentences": [],
-             # "Tokens": 10
+             "Sentence": "",
+             "Tokens": 10
          })
 
         ret_json = {
@@ -106,8 +108,28 @@ class Store(Resource):
         return jsonify(ret_json)
 
 
+class Get(Resource):
+    def get(self):
+        args = parser.parse_args()
+        username = args["Username"]
+        password = args["Password"]
+
+        correct_info = verify_password(username, password)
+        if not correct_info:
+            abort(400, message="Username or password incorrect")
+
+        sentence = users.find({"Username": username})[0]["Sentence"]
+
+        ret_json = {
+            "Status": 200,
+            "Message": sentence
+        }
+        return jsonify(ret_json)
+
+
+api.add_resource(Get, '/get')
 api.add_resource(Register, '/register')
 api.add_resource(Store, '/store')
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", debug=True)
+    app.run(debug=True)
